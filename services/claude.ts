@@ -2,6 +2,7 @@
 import { supabase, SUPABASE_URL } from './supabase';
 import type { Message, AiResponse, Character, SubjectId } from '../types';
 import { getCharacterById } from '../constants/characters';
+import { getDemoGreeting, getDemoResponse } from './demoMode';
 
 /**
  * Tüm Claude çağrıları Supabase Edge Function proxy üzerinden yapılır.
@@ -15,7 +16,10 @@ export async function askCharacter(
   subject: SubjectId,
 ): Promise<AiResponse> {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Oturum bulunamadı');
+  if (!session) {
+    console.warn('Oturum bulunamadı — demo moda geçiliyor');
+    return messages.length === 0 ? getDemoGreeting() : getDemoResponse();
+  }
 
   const res = await fetch(
     `${SUPABASE_URL}/functions/v1/ai-proxy/claude`,
@@ -35,8 +39,8 @@ export async function askCharacter(
   );
 
   if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Claude proxy hatası: ${res.status} — ${errText}`);
+    console.warn(`Claude proxy hatası: ${res.status} — demo moda geçiliyor`);
+    return messages.length === 0 ? getDemoGreeting() : getDemoResponse();
   }
 
   const data = await res.json();

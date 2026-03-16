@@ -8,7 +8,10 @@ import { supabase, SUPABASE_URL } from './supabase';
  */
 export async function textToSpeech(text: string): Promise<string> {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Oturum bulunamadı');
+  if (!session) {
+    console.warn('Oturum bulunamadı — demo moda geçiliyor (ses yok)');
+    return '';
+  }
 
   const res = await fetch(
     `${SUPABASE_URL}/functions/v1/ai-proxy/elevenlabs`,
@@ -23,7 +26,8 @@ export async function textToSpeech(text: string): Promise<string> {
   );
 
   if (!res.ok) {
-    throw new Error(`ElevenLabs proxy hatası: ${res.status}`);
+    console.warn(`ElevenLabs proxy hatası: ${res.status} — demo moda geçiliyor (ses yok)`);
+    return '';
   }
 
   // Ses verisini yerel dosyaya kaydet

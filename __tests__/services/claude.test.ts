@@ -76,14 +76,15 @@ describe('askAtes', () => {
     expect(callBody.messages).toHaveLength(1);
   });
 
-  it('sunucu hatası durumunda hata fırlatmalı', async () => {
+  it('sunucu hatası durumunda demo moda geçmeli', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
       text: () => Promise.resolve('Internal Server Error'),
     });
 
-    await expect(askAtes([], 'Ali', 1)).rejects.toThrow('Claude proxy hatası');
+    const result = await askAtes([], 'Ali', 1);
+    expect(result.response).toBeTruthy();
   });
 });
 

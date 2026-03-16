@@ -50,14 +50,13 @@ describe('speechToText', () => {
     );
   });
 
-  it('sunucu hatası durumunda hata fırlatmalı', async () => {
+  it('sunucu hatası durumunda demo moda geçmeli', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
     });
 
-    await expect(speechToText('file:///test/audio.m4a')).rejects.toThrow(
-      'Whisper proxy hatası',
-    );
+    const result = await speechToText('file:///test/audio.m4a');
+    expect(result).toBeTruthy();
   });
 });

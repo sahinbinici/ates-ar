@@ -1,5 +1,6 @@
 // services/whisper.ts — Whisper API proxy üzerinden ses tanıma
 import { supabase, SUPABASE_URL } from './supabase';
+import { getDemoTranscript } from './demoMode';
 
 /**
  * Ses dosyasını Supabase Edge Function proxy'sine gönderir.
@@ -7,7 +8,10 @@ import { supabase, SUPABASE_URL } from './supabase';
  */
 export async function speechToText(audioUri: string): Promise<string> {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Oturum bulunamadı');
+  if (!session) {
+    console.warn('Oturum bulunamadı — demo moda geçiliyor');
+    return getDemoTranscript();
+  }
 
   const formData = new FormData();
   formData.append('file', {
@@ -29,7 +33,8 @@ export async function speechToText(audioUri: string): Promise<string> {
   );
 
   if (!res.ok) {
-    throw new Error(`Whisper proxy hatası: ${res.status}`);
+    console.warn(`Whisper proxy hatası: ${res.status} — demo moda geçiliyor`);
+    return getDemoTranscript();
   }
 
   const data = await res.json();
