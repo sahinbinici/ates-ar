@@ -8,7 +8,6 @@ import { useProgress } from './useProgress';
 import { askCharacter } from '../services/claude';
 import { speechToText } from '../services/whisper';
 import { textToSpeech } from '../services/elevenlabs';
-import { Audio } from 'expo-av';
 import type { LessonModule, Message, Character, SubjectId } from '../types';
 import { getCharacterById, DEFAULT_CHARACTER_ID } from '../constants/characters';
 
@@ -23,6 +22,7 @@ export function useLesson() {
   const subjectRef = useRef<SubjectId>('math');
 
   const playAudio = useCallback(async (uri: string) => {
+    const { Audio } = require('expo-av') as typeof import('expo-av');
     const { sound } = await Audio.Sound.createAsync({ uri });
     ates.triggerTalking();
     await sound.playAsync();

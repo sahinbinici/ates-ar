@@ -1,12 +1,22 @@
 // hooks/useAudio.ts — Mikrofon kaydı yönetimi
 import { useCallback, useRef } from 'react';
-import { Audio } from 'expo-av';
+
+function getAudio() {
+  try {
+    return require('expo-av').Audio as typeof import('expo-av').Audio;
+  } catch {
+    return null;
+  }
+}
 
 export function useAudio() {
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  const recordingRef = useRef<any>(null);
 
-  const startRecording = useCallback(async (): Promise<Audio.Recording | null> => {
+  const startRecording = useCallback(async (): Promise<any | null> => {
     try {
+      const Audio = getAudio();
+      if (!Audio) return null;
+
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) return null;
 
@@ -27,13 +37,14 @@ export function useAudio() {
   }, []);
 
   const stopRecording = useCallback(
-    async (recording?: Audio.Recording): Promise<string | null> => {
+    async (recording?: any): Promise<string | null> => {
       const rec = recording ?? recordingRef.current;
       if (!rec) return null;
 
       try {
+        const Audio = getAudio();
         await rec.stopAndUnloadAsync();
-        await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+        if (Audio) await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
 
         const uri = rec.getURI();
         recordingRef.current = null;

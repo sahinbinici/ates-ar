@@ -17,7 +17,7 @@ export class SceneManager {
   private atesGroup!: THREE.Group;
   private objectsGroup!: THREE.Group;
   private animationId: number | null = null;
-  private timer = new THREE.Timer();
+  private clock = new THREE.Clock();
   private atesState: AtesState = 'idle';
   private bounceTime = 0;
   private disposed = false;
@@ -242,8 +242,7 @@ export class SceneManager {
       if (this.disposed) return;
       this.animationId = requestAnimationFrame(animate);
 
-      this.timer.update();
-      const delta = this.timer.getDelta();
+      const delta = this.clock.getDelta();
       this.bounceTime += delta;
 
       this.animateAtes();

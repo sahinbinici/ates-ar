@@ -11,11 +11,21 @@ const supabaseAnonKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_ANON_K
   ?? process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
   ?? '';
 
-export const supabase = createClient(SUPABASE_URL, supabaseAnonKey, {
-  auth: {
-    storage: AsyncStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: false,
+if (!SUPABASE_URL || !supabaseAnonKey) {
+  console.warn(
+    'Supabase credentials missing. Copy .env.example to .env and fill in your values.',
+  );
+}
+
+export const supabase = createClient(
+  SUPABASE_URL || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder',
+  {
+    auth: {
+      storage: AsyncStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+    },
   },
-});
+);
