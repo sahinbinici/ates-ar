@@ -37,6 +37,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           full_name: fullName,
         });
       }
+    } catch (err) {
+      if (err instanceof TypeError && /network/i.test(err.message)) {
+        throw new Error('Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.');
+      }
+      throw err;
     } finally {
       set({ loading: false });
     }
@@ -49,6 +54,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (error) throw error;
       await get().loadProfile();
       await get().loadChildren();
+    } catch (err) {
+      if (err instanceof TypeError && /network/i.test(err.message)) {
+        throw new Error('Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.');
+      }
+      throw err;
     } finally {
       set({ loading: false });
     }

@@ -1,8 +1,10 @@
-// components/ar/AtesCharacter.tsx — 2D animasyonlu Ateş bileşeni (non-AR ekranlar için)
+// components/ar/AtesCharacter.tsx — Ateş bileşeni: GLB model veya emoji fallback
 import React from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Animated, ActivityIndicator } from 'react-native';
+import { GLView } from 'expo-gl';
 import type { AtesState } from '../../types';
 import { ATES_ANIMATIONS } from '../../constants/animations';
+import { SceneManager } from '../../lib/ar/SceneManager';
 
 interface Props {
   state: AtesState;
@@ -10,17 +12,26 @@ interface Props {
 }
 
 /**
- * Ateş karakteri 2D animasyonlu görünüm.
- * Ana ekran, modül listesi gibi non-AR ekranlar için kullanılır.
- * AR sahnedeki 3D Ateş, SceneManager tarafından Three.js ile render edilir.
+ * Ateş karakteri bileşeni.
+ * GLB model yüklenene kadar spinner gösterir.
+ * Model yüklenemezse emoji fallback'e döner.
  */
 export function AtesCharacter({ state, size = 120 }: Props) {
+  const [modelReady, setModelReady] = React.useState(false);
+  const [modelFailed, setModelFailed] = React.useState(false);
+  const sceneRef = React.useRef<SceneManager | null>(null);
+
   const animation = ATES_ANIMATIONS[state];
   const bounceAnim = React.useRef(new Animated.Value(0)).current;
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
+  // Ateş durumu değiştiğinde 3D sahneyi güncelle
   React.useEffect(() => {
-    // Zıplama animasyonu
+    sceneRef.current?.setAtesState(state);
+  }, [state]);
+
+  React.useEffect(() => {
+    // Zıplama animasyonu (emoji fallback için)
     const bounce = Animated.loop(
       Animated.sequence([
         Animated.timing(bounceAnim, {
@@ -37,7 +48,6 @@ export function AtesCharacter({ state, size = 120 }: Props) {
     );
     bounce.start();
 
-    // Durum değişiminde ölçek efekti
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 1.15,
@@ -53,6 +63,34 @@ export function AtesCharacter({ state, size = 120 }: Props) {
 
     return () => bounce.stop();
   }, [state, animation, bounceAnim, scaleAnim]);
+
+  const handleContextCreate = React.useCallback(
+    async (gl: WebGLRenderingContext) => {
+      try {
+        const manager = new SceneManager();
+        manager.onModelLoaded = () => setModelReady(true);
+        manager.onModelError = () => setModelFailed(true);
+        sceneRef.current = manager;
+        await manager.init(
+          gl as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+          gl.drawingBufferWidth,
+          gl.drawingBufferHeight,
+        );
+        manager.setAtesState(state);
+      } catch (err) {
+        console.warn('[AtesCharacter] GL init hatası:', err);
+        setModelFailed(true);
+      }
+    },
+    [], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  // Temizlik
+  React.useEffect(() => {
+    return () => {
+      sceneRef.current?.dispose();
+    };
+  }, []);
 
   const stateEmoji: Record<AtesState, string> = {
     idle: '🦊',
@@ -76,34 +114,51 @@ export function AtesCharacter({ state, size = 120 }: Props) {
     loading: 'rgba(158, 158, 158, 0.2)',
   };
 
-  return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          transform: [
-            { translateY: bounceAnim },
-            { scale: scaleAnim },
-          ],
-        },
-      ]}
-    >
-      <View
+  // Model başarısız → emoji fallback
+  if (modelFailed) {
+    return (
+      <Animated.View
         style={[
-          styles.character,
+          styles.container,
           {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            backgroundColor: stateColor[state],
+            transform: [
+              { translateY: bounceAnim },
+              { scale: scaleAnim },
+            ],
           },
         ]}
       >
-        <Animated.Text style={[styles.emoji, { fontSize: size * 0.5 }]}>
-          {stateEmoji[state]}
-        </Animated.Text>
-      </View>
-    </Animated.View>
+        <View
+          style={[
+            styles.character,
+            {
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              backgroundColor: stateColor[state],
+            },
+          ]}
+        >
+          <Animated.Text style={[styles.emoji, { fontSize: size * 0.5 }]}>
+            {stateEmoji[state]}
+          </Animated.Text>
+        </View>
+      </Animated.View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { width: size, height: size }]}>
+      <GLView
+        style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden' }}
+        onContextCreate={handleContextCreate}
+      />
+      {!modelReady && (
+        <View style={styles.spinnerOverlay}>
+          <ActivityIndicator size="small" color="#FF6B35" />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -118,5 +173,12 @@ const styles = StyleSheet.create({
   },
   emoji: {
     fontSize: 60,
+  },
+  spinnerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 999,
   },
 });

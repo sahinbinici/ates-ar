@@ -20,15 +20,13 @@ export const ATES_ANIMATIONS: Record<AtesState, AnimationConfig> = {
 
 /**
  * Ateş 3D model bilgisi.
- * Geometrik placeholder Three.js ile SceneManager içinde oluşturulur.
- * Gerçek .glb model hazır olduğunda buradan yüklenecek.
+ * assets/models/ates.glb modeli expo-three loadAsync ile yüklenir.
  */
 export const ATES_MODEL = {
-  // Gerçek model dosyası hazır olduğunda:
-  // source: require('../assets/models/ates_fox.glb'),
-  source: 'ates_fox.glb',
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  source: require('../assets/models/ates.glb'),
   scale: [0.3, 0.3, 0.3] as [number, number, number],
-  defaultPosition: [0, 0, -1] as [number, number, number],
+  defaultPosition: [0, -0.3, 0] as [number, number, number],
 };
 
 export const CONFETTI_COLORS = ['#FF6B35', '#FFD700', '#FF4081', '#00E676', '#448AFF'];

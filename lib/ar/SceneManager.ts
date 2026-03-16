@@ -1,14 +1,25 @@
 // lib/ar/SceneManager.ts — Three.js sahne yönetimi (imperatif)
 import { ExpoWebGLRenderingContext } from 'expo-gl';
-import { Renderer, TextureLoader } from 'expo-three';
+import { Renderer } from 'expo-three';
+import { loadAsync } from 'expo-three';
 import * as THREE from 'three';
 import type { ARObject, AtesState } from '../../types';
 import { ATES_ANIMATIONS } from '../../constants/animations';
+import { ATES_MODEL } from '../../constants/animations';
+
+/** GLB yükleme sonucu tipi */
+interface GLTFResult {
+  scene: THREE.Group;
+  animations: THREE.AnimationClip[];
+  scenes: THREE.Group[];
+  cameras: THREE.Camera[];
+  asset: Record<string, unknown>;
+}
 
 /**
  * Three.js sahnesini yönetir.
  * GLView'den gelen GL context ile başlatılır.
- * Ateş karakteri + ders nesneleri burada render edilir.
+ * Ateş karakteri (ates.glb) + ders nesneleri burada render edilir.
  */
 export class SceneManager {
   private renderer!: THREE.WebGLRenderer;
@@ -22,11 +33,34 @@ export class SceneManager {
   private bounceTime = 0;
   private disposed = false;
 
+  // GLB model & animasyon
+  private mixer: THREE.AnimationMixer | null = null;
+  private animationClips: THREE.AnimationClip[] = [];
+  private currentAction: THREE.AnimationAction | null = null;
+  private modelLoaded = false;
+  private _onModelLoaded: (() => void) | null = null;
+  private _onModelError: ((error: Error) => void) | null = null;
+
+  /** Model yüklendiğinde çağrılacak callback'i ayarla */
+  set onModelLoaded(cb: (() => void) | null) {
+    this._onModelLoaded = cb;
+  }
+
+  /** Model yükleme hatası callback'i */
+  set onModelError(cb: ((error: Error) => void) | null) {
+    this._onModelError = cb;
+  }
+
+  /** Model yüklendi mi? */
+  get isModelLoaded(): boolean {
+    return this.modelLoaded;
+  }
+
   async init(gl: ExpoWebGLRenderingContext, width: number, height: number) {
     // Renderer
     this.renderer = new Renderer({ gl }) as unknown as THREE.WebGLRenderer;
     this.renderer.setSize(width, height);
-    this.renderer.setClearColor(0x000000, 0); // şeffaf arka plan
+    this.renderer.setClearColor(0x000000, 0);
 
     // Sahne
     this.scene = new THREE.Scene();
@@ -46,20 +80,98 @@ export class SceneManager {
 
     // Ateş karakter grubu
     this.atesGroup = new THREE.Group();
-    this.atesGroup.position.set(0, -0.3, 0);
-    this.buildAtesFox();
+    const [px, py, pz] = ATES_MODEL.defaultPosition;
+    this.atesGroup.position.set(px, py, pz);
     this.scene.add(this.atesGroup);
 
     // Ders nesneleri grubu
     this.objectsGroup = new THREE.Group();
     this.scene.add(this.objectsGroup);
 
+    // GLB model yükle
+    this.loadAtesModel();
+
     // Render döngüsü
     this.startLoop();
   }
 
-  /** Ateş tilki geometrik model */
-  private buildAtesFox() {
+  /** GLB modeli yükle, hata olursa geometrik fallback */
+  private async loadAtesModel() {
+    try {
+      console.log('[SceneManager] GLB model yükleniyor...');
+      const gltf = (await loadAsync(ATES_MODEL.source)) as unknown as GLTFResult;
+
+      const model = gltf.scene;
+      const [sx, sy, sz] = ATES_MODEL.scale;
+      model.scale.set(sx, sy, sz);
+      this.atesGroup.add(model);
+
+      // Animasyonları listele
+      this.animationClips = gltf.animations ?? [];
+      if (this.animationClips.length > 0) {
+        console.log(
+          `[SceneManager] ${this.animationClips.length} animasyon bulundu:`,
+          this.animationClips.map((c) => c.name),
+        );
+        this.mixer = new THREE.AnimationMixer(model);
+        this.playAnimationForState(this.atesState);
+      } else {
+        console.log('[SceneManager] Animasyon yok, basit bounce döngüsü kullanılacak.');
+      }
+
+      this.modelLoaded = true;
+      this._onModelLoaded?.();
+      console.log('[SceneManager] GLB model başarıyla yüklendi ✓');
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.warn('[SceneManager] GLB yükleme hatası, geometrik fallback:', error.message);
+      this.buildFallbackFox();
+      this.modelLoaded = true;
+      this._onModelError?.(error);
+    }
+  }
+
+  /** Animasyonlu modelde duruma göre klip eşleştirme */
+  private playAnimationForState(state: AtesState) {
+    if (!this.mixer || this.animationClips.length === 0) return;
+
+    const config = ATES_ANIMATIONS[state];
+
+    // Modeldeki animasyon adlarına göre eşleştir
+    let clip = this.animationClips.find((c) =>
+      c.name.toLowerCase().includes(config.name.toLowerCase()),
+    );
+
+    // Eşleşme yoksa durum adıyla dene
+    if (!clip) {
+      clip = this.animationClips.find((c) =>
+        c.name.toLowerCase().includes(state.toLowerCase()),
+      );
+    }
+
+    // Hâlâ yoksa ilk klip'i kullan (idle varsayılan)
+    if (!clip) {
+      clip = this.animationClips[0];
+    }
+
+    if (this.currentAction) {
+      this.currentAction.fadeOut(0.3);
+    }
+
+    const action = this.mixer.clipAction(clip);
+    action.reset();
+    action.setLoop(
+      config.loop ? THREE.LoopRepeat : THREE.LoopOnce,
+      config.loop ? Infinity : 1,
+    );
+    action.clampWhenFinished = !config.loop;
+    action.fadeIn(0.3);
+    action.play();
+    this.currentAction = action;
+  }
+
+  /** Geometrik fallback tilki (model yüklenemezse) */
+  private buildFallbackFox() {
     // Gövde — turuncu küre
     const bodyGeo = new THREE.SphereGeometry(0.25, 16, 16);
     const bodyMat = new THREE.MeshLambertMaterial({ color: 0xff6b35 });
@@ -67,7 +179,7 @@ export class SceneManager {
     body.name = 'body';
     this.atesGroup.add(body);
 
-    // Kafa — daha küçük küre
+    // Kafa
     const headGeo = new THREE.SphereGeometry(0.18, 16, 16);
     const headMat = new THREE.MeshLambertMaterial({ color: 0xff6b35 });
     const head = new THREE.Mesh(headGeo, headMat);
@@ -75,18 +187,17 @@ export class SceneManager {
     head.name = 'head';
     this.atesGroup.add(head);
 
-    // Kulaklar — koniler
+    // Kulaklar
     const earGeo = new THREE.ConeGeometry(0.06, 0.15, 8);
     const earMat = new THREE.MeshLambertMaterial({ color: 0xff8c55 });
     const leftEar = new THREE.Mesh(earGeo, earMat);
     leftEar.position.set(-0.1, 0.55, 0);
     this.atesGroup.add(leftEar);
-
     const rightEar = new THREE.Mesh(earGeo, earMat);
     rightEar.position.set(0.1, 0.55, 0);
     this.atesGroup.add(rightEar);
 
-    // Gözler — beyaz + siyah
+    // Gözler
     const eyeWhiteGeo = new THREE.SphereGeometry(0.04, 8, 8);
     const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const eyePupilGeo = new THREE.SphereGeometry(0.02, 8, 8);
@@ -106,14 +217,14 @@ export class SceneManager {
     rightEyeP.position.set(0.07, 0.38, 0.18);
     this.atesGroup.add(rightEyeP);
 
-    // Burun — küçük siyah küre
+    // Burun
     const noseGeo = new THREE.SphereGeometry(0.025, 8, 8);
     const noseMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
     const nose = new THREE.Mesh(noseGeo, noseMat);
     nose.position.set(0, 0.33, 0.17);
     this.atesGroup.add(nose);
 
-    // Kuyruk — eğimli silindir
+    // Kuyruk
     const tailGeo = new THREE.CylinderGeometry(0.03, 0.06, 0.3, 8);
     const tailMat = new THREE.MeshLambertMaterial({ color: 0xff8c55 });
     const tail = new THREE.Mesh(tailGeo, tailMat);
@@ -122,7 +233,7 @@ export class SceneManager {
     tail.name = 'tail';
     this.atesGroup.add(tail);
 
-    // Kuyruk ucu — beyaz
+    // Kuyruk ucu
     const tailTipGeo = new THREE.SphereGeometry(0.04, 8, 8);
     const tailTipMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
     const tailTip = new THREE.Mesh(tailTipGeo, tailTipMat);
@@ -194,10 +305,13 @@ export class SceneManager {
   /** Ateş durumunu güncelle */
   setAtesState(state: AtesState) {
     this.atesState = state;
+    if (this.mixer && this.animationClips.length > 0) {
+      this.playAnimationForState(state);
+    }
     this.updateAtesAppearance();
   }
 
-  /** Duruma göre renk/ölçek güncelle */
+  /** Duruma göre renk/ölçek güncelle (fallback modda) */
   private updateAtesAppearance() {
     const body = this.atesGroup.getObjectByName('body') as THREE.Mesh | undefined;
     if (!body) return;
@@ -206,13 +320,13 @@ export class SceneManager {
     switch (this.atesState) {
       case 'correct':
       case 'celebrating':
-        mat.color.setHex(0xffd700); // altın
+        mat.color.setHex(0xffd700);
         break;
       case 'wrong':
-        mat.color.setHex(0xff9800); // koyu turuncu
+        mat.color.setHex(0xff9800);
         break;
       default:
-        mat.color.setHex(0xff6b35); // normal turuncu
+        mat.color.setHex(0xff6b35);
         break;
     }
   }
@@ -245,6 +359,9 @@ export class SceneManager {
       const delta = this.clock.getDelta();
       this.bounceTime += delta;
 
+      // AnimationMixer güncelle (GLB animasyonları)
+      this.mixer?.update(delta);
+
       this.animateAtes();
       this.animateObjects();
 
@@ -256,27 +373,39 @@ export class SceneManager {
   }
 
   private animateAtes() {
-    const config = ATES_ANIMATIONS[this.atesState];
+    const [, baseY] = ATES_MODEL.defaultPosition;
 
-    // Zıplama animasyonu
+    if (this.mixer && this.animationClips.length > 0) {
+      // GLB modelde animasyon var — sadece basit bounce + celebrating pulse ekle
+      const bounceAmp = this.atesState === 'celebrating' ? 0.08 : 0.02;
+      this.atesGroup.position.y = baseY + Math.sin(this.bounceTime * 2) * bounceAmp;
+
+      if (this.atesState === 'celebrating') {
+        const pulse = 1 + Math.sin(this.bounceTime * 6) * 0.05;
+        this.atesGroup.scale.set(pulse, pulse, pulse);
+      } else {
+        this.atesGroup.scale.set(1, 1, 1);
+      }
+      return;
+    }
+
+    // Fallback geometrik model animasyonları
+    const config = ATES_ANIMATIONS[this.atesState];
     const bounceSpeed = config.loop ? 2 : 5;
     const bounceAmp = this.atesState === 'celebrating' ? 0.15 : 0.05;
-    this.atesGroup.position.y = -0.3 + Math.sin(this.bounceTime * bounceSpeed) * bounceAmp;
+    this.atesGroup.position.y = baseY + Math.sin(this.bounceTime * bounceSpeed) * bounceAmp;
 
-    // Kuyruk sallama
     const tail = this.atesGroup.getObjectByName('tail');
     if (tail) {
       const tailSpeed = this.atesState === 'celebrating' ? 8 : 3;
       tail.rotation.z = Math.sin(this.bounceTime * tailSpeed) * 0.3;
     }
 
-    // Kafa hafif sallanma (konuşurken)
     const head = this.atesGroup.getObjectByName('head');
     if (head && (this.atesState === 'talking' || this.atesState === 'explaining')) {
       head.rotation.z = Math.sin(this.bounceTime * 4) * 0.1;
     }
 
-    // Kutlamada ölçek pulsasyonu
     if (this.atesState === 'celebrating') {
       const pulse = 1 + Math.sin(this.bounceTime * 6) * 0.05;
       this.atesGroup.scale.set(pulse, pulse, pulse);
@@ -298,6 +427,10 @@ export class SceneManager {
     this.disposed = true;
     if (this.animationId !== null) {
       cancelAnimationFrame(this.animationId);
+    }
+    if (this.mixer) {
+      this.mixer.stopAllAction();
+      this.mixer = null;
     }
     this.scene.traverse((obj) => {
       if (obj instanceof THREE.Mesh) {

@@ -21,30 +21,35 @@ export async function askCharacter(
     return messages.length === 0 ? getDemoGreeting() : getDemoResponse();
   }
 
-  const res = await fetch(
-    `${SUPABASE_URL}/functions/v1/ai-proxy/claude`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/ai-proxy/claude`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          childName,
+          grade,
+          messages,
+          systemPrompt: character.systemPrompt(childName, grade, subject),
+        }),
       },
-      body: JSON.stringify({
-        childName,
-        grade,
-        messages,
-        systemPrompt: character.systemPrompt(childName, grade, subject),
-      }),
-    },
-  );
+    );
 
-  if (!res.ok) {
-    console.warn(`Claude proxy hatası: ${res.status} — demo moda geçiliyor`);
+    if (!res.ok) {
+      console.warn(`Claude proxy hatası: ${res.status} — demo moda geçiliyor`);
+      return messages.length === 0 ? getDemoGreeting() : getDemoResponse();
+    }
+
+    const data = await res.json();
+    return data as AiResponse;
+  } catch (err) {
+    console.warn('Claude ağ hatası — demo moda geçiliyor', err);
     return messages.length === 0 ? getDemoGreeting() : getDemoResponse();
   }
-
-  const data = await res.json();
-  return data as AiResponse;
 }
 
 /** @deprecated askCharacter kullanın */

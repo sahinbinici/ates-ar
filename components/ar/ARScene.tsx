@@ -6,6 +6,7 @@ import {
   Text,
   GestureResponderEvent,
   LayoutChangeEvent,
+  ActivityIndicator,
 } from 'react-native';
 import { CameraView } from 'expo-camera';
 import { GLView } from 'expo-gl';
@@ -21,11 +22,13 @@ interface Props {
  * Ana AR sahne bileşeni.
  * Kamera izni → Zemin tarama → Three.js 3D sahne overlay.
  * CameraView arka plan, GLView üzerinde şeffaf 3D render.
+ * GLB model yüklenemezse geometrik fallback otomatik devreye girer.
  */
 export function ARScene({ onObjectTouched }: Props) {
   const [hasPermission, setHasPermission] = useState(false);
   const [planeDetected, setPlaneDetected] = useState(false);
   const [viewSize, setViewSize] = useState({ width: 1, height: 1 });
+  const [modelLoading, setModelLoading] = useState(true);
   const sceneRef = useRef<SceneManager | null>(null);
 
   const atesState = useLessonStore((s) => s.atesState);
@@ -52,14 +55,29 @@ export function ARScene({ onObjectTouched }: Props) {
   // GLView bağlam oluşturulduğunda Three.js başlat
   const handleContextCreate = useCallback(
     async (gl: WebGLRenderingContext) => {
-      const manager = new SceneManager();
-      sceneRef.current = manager;
-      await manager.init(gl as any, gl.drawingBufferWidth, gl.drawingBufferHeight);
+      try {
+        const manager = new SceneManager();
 
-      // Mevcut durumu uygula
-      manager.setAtesState(atesState);
-      if (currentQuestion) {
-        manager.setSceneObjects(currentQuestion.sceneObjects);
+        manager.onModelLoaded = () => {
+          console.log('[ARScene] Model yüklendi ✓');
+          setModelLoading(false);
+        };
+        manager.onModelError = (error) => {
+          console.warn('[ARScene] Model yükleme hatası, geometrik fallback aktif:', error.message);
+          setModelLoading(false);
+        };
+
+        sceneRef.current = manager;
+        await manager.init(gl as any, gl.drawingBufferWidth, gl.drawingBufferHeight);
+
+        // Mevcut durumu uygula
+        manager.setAtesState(atesState);
+        if (currentQuestion) {
+          manager.setSceneObjects(currentQuestion.sceneObjects);
+        }
+      } catch (err) {
+        console.error('[ARScene] Three.js init hatası:', err);
+        setModelLoading(false);
       }
     },
     [], // eslint-disable-line react-hooks/exhaustive-deps
@@ -112,6 +130,12 @@ export function ARScene({ onObjectTouched }: Props) {
           onResponderRelease={handleTouch}
         >
           <GLView style={styles.glView} onContextCreate={handleContextCreate} />
+          {modelLoading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#FF6B35" />
+              <Text style={styles.loadingText}>Ateş yükleniyor...</Text>
+            </View>
+          )}
         </View>
       ) : (
         <View style={styles.scanOverlay}>
@@ -135,6 +159,19 @@ const styles = StyleSheet.create({
   },
   glView: {
     flex: 1,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 14,
+    marginTop: 8,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   scanOverlay: {
     ...StyleSheet.absoluteFillObject,

@@ -1,7 +1,7 @@
 // app/(parent)/child/[id].tsx — Çocuk detay ekranı
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuthStore } from '../../../stores/authStore';
 import { useProgress } from '../../../hooks/useProgress';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 
 export default function ChildDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const children = useAuthStore((s) => s.children);
   const setActiveChild = useAuthStore((s) => s.setActiveChild);
   const { loadProgress, getWeeklySummary } = useProgress();
@@ -37,8 +38,9 @@ export default function ChildDetailScreen() {
     );
   }
 
+  const gradeModules = LESSON_MODULES.filter((m) => m.grade === child.grade);
   const completedModules = progress.filter((p) => p.completed).length;
-  const totalModules = LESSON_MODULES.filter((m) => m.grade === child.grade).length;
+  const totalModules = gradeModules.length;
 
   return (
     <ScrollView style={styles.container}>
@@ -71,6 +73,14 @@ export default function ChildDetailScreen() {
         </View>
       )}
 
+      {/* Derse Başla */}
+      <TouchableOpacity
+        style={styles.startLessonButton}
+        onPress={() => router.push('/(child)/home')}
+      >
+        <Text style={styles.startLessonText}>🦊 {t('child.start')}</Text>
+      </TouchableOpacity>
+
       {/* Modül İlerleme */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t('parent.moduleProgress')}</Text>
@@ -81,17 +91,27 @@ export default function ChildDetailScreen() {
           color="#4CAF50"
         />
 
-        {progress.map((p) => {
-          const module = LESSON_MODULES.find((m) => m.id === p.moduleId);
-          if (!module) return null;
+        {gradeModules.map((module) => {
+          const p = progress.find((pr) => pr.moduleId === module.id);
           return (
-            <View key={p.id} style={styles.moduleRow}>
+            <TouchableOpacity
+              key={module.id}
+              style={styles.moduleRow}
+              onPress={() => router.push(`/(child)/lesson/${module.id}`)}
+              activeOpacity={0.7}
+            >
               <Text style={styles.moduleName}>{module.title}</Text>
               <View style={styles.moduleStats}>
-                <Text style={styles.moduleScore}>⭐ {p.bestScore}</Text>
-                {p.completed && <Text style={styles.moduleComplete}>✅</Text>}
+                {p ? (
+                  <>
+                    <Text style={styles.moduleScore}>⭐ {p.bestScore}</Text>
+                    {p.completed && <Text style={styles.moduleComplete}>✅</Text>}
+                  </>
+                ) : (
+                  <Text style={styles.moduleNotStarted}>Oyna →</Text>
+                )}
               </View>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>
@@ -192,5 +212,23 @@ const styles = StyleSheet.create({
   },
   moduleComplete: {
     fontSize: 16,
+  },
+  moduleNotStarted: {
+    fontSize: 14,
+    color: '#FF6B35',
+    fontWeight: '600',
+  },
+  startLessonButton: {
+    backgroundColor: '#FF6B35',
+    margin: 16,
+    marginBottom: 0,
+    borderRadius: 16,
+    padding: 18,
+    alignItems: 'center',
+  },
+  startLessonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });

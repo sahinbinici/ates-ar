@@ -21,22 +21,27 @@ export async function speechToText(audioUri: string): Promise<string> {
   } as unknown as Blob);
   formData.append('language', 'tr');
 
-  const res = await fetch(
-    `${SUPABASE_URL}/functions/v1/ai-proxy/whisper`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/ai-proxy/whisper`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: formData,
       },
-      body: formData,
-    },
-  );
+    );
 
-  if (!res.ok) {
-    console.warn(`Whisper proxy hatası: ${res.status} — demo moda geçiliyor`);
+    if (!res.ok) {
+      console.warn(`Whisper proxy hatası: ${res.status} — demo moda geçiliyor`);
+      return getDemoTranscript();
+    }
+
+    const data = await res.json();
+    return data.text;
+  } catch (err) {
+    console.warn('Whisper ağ hatası — demo moda geçiliyor', err);
     return getDemoTranscript();
   }
-
-  const data = await res.json();
-  return data.text;
 }

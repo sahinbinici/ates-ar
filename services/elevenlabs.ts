@@ -13,30 +13,35 @@ export async function textToSpeech(text: string): Promise<string> {
     return '';
   }
 
-  const res = await fetch(
-    `${SUPABASE_URL}/functions/v1/ai-proxy/elevenlabs`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/ai-proxy/elevenlabs`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ text }),
       },
-      body: JSON.stringify({ text }),
-    },
-  );
+    );
 
-  if (!res.ok) {
-    console.warn(`ElevenLabs proxy hatası: ${res.status} — demo moda geçiliyor (ses yok)`);
+    if (!res.ok) {
+      console.warn(`ElevenLabs proxy hatası: ${res.status} — demo moda geçiliyor (ses yok)`);
+      return '';
+    }
+
+    // Ses verisini yerel dosyaya kaydet
+    const blob = await res.blob();
+    const buffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+
+    const file = new File(Paths.cache, `ates_tts_${Date.now()}.mp3`);
+    file.write(bytes);
+
+    return file.uri;
+  } catch (err) {
+    console.warn('ElevenLabs ağ hatası — demo moda geçiliyor (ses yok)', err);
     return '';
   }
-
-  // Ses verisini yerel dosyaya kaydet
-  const blob = await res.blob();
-  const buffer = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-
-  const file = new File(Paths.cache, `ates_tts_${Date.now()}.mp3`);
-  file.write(bytes);
-
-  return file.uri;
 }
