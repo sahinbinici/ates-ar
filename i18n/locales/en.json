@@ -1,0 +1,79 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "back": "Back"
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "fullName": "Full Name",
+    "noAccount": "Don't have an account? Sign up",
+    "hasAccount": "Already have an account? Sign in",
+    "loginError": "Login Error",
+    "registerError": "Registration Error",
+    "registerSuccess": "Registration complete! Please verify your email.",
+    "kvkkConsent": "I have read and accept the Privacy Policy."
+  },
+  "parent": {
+    "welcome": "Welcome",
+    "childProfiles": "Child Profiles",
+    "addChild": "Add Child",
+    "settings": "Settings",
+    "signOut": "Sign Out",
+    "weeklyReport": "This Week",
+    "sessions": "Sessions",
+    "duration": "Duration",
+    "stars": "Stars",
+    "moduleProgress": "Module Progress",
+    "completedModules": "Completed modules",
+    "profileNotFound": "Child profile not found.",
+    "gradeClass": "Grade",
+    "age": "years old",
+    "gradeLessons": "Grade Lessons",
+    "deleteAccountConfirm": "Are you sure you want to permanently delete your account and all child data? This action cannot be undone.",
+    "deleteError": "An error occurred while deleting the account.",
+    "yourData": "Your Data"
+  },
+  "child": {
+    "todayLesson": "Today's Lesson",
+    "allLessons": "All Lessons",
+    "start": "Start",
+    "locked": "Locked",
+    "completed": "Completed",
+    "starsRequired": "stars required",
+    "greeting": "Hello",
+    "readyToLearn": "What are you ready to learn today? 🎉"
+  },
+  "lesson": {
+    "question": "Question",
+    "tapToAnswer": "Tap to answer",
+    "tapToStop": "Tap to stop",
+    "atesThinking": "Ateş is thinking...",
+    "congratulations": "Congratulations!",
+    "completedSection": "section completed!",
+    "correct": "Correct",
+    "continue": "Continue"
+  },
+  "settings": {
+    "account": "Account",
+    "notifications": "Notifications",
+    "dailyReminder": "Daily Reminder",
+    "screenTime": "Screen Time",
+    "dailyLimit": "Daily Limit",
+    "privacy": "Data & Privacy",
+    "exportData": "Download My Data",
+    "deleteAccount": "Delete My Account",
+    "upgradePlan": "Upgrade Plan",
+    "min": "min",
+    "plan": "Plan",
+    "deleteAccountTitle": "Delete Account"
+  }
+}

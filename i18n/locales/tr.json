@@ -1,0 +1,79 @@
+{
+  "common": {
+    "loading": "Yükleniyor...",
+    "error": "Hata",
+    "ok": "Tamam",
+    "cancel": "İptal",
+    "save": "Kaydet",
+    "delete": "Sil",
+    "back": "Geri"
+  },
+  "auth": {
+    "login": "Giriş Yap",
+    "register": "Kayıt Ol",
+    "email": "E-posta",
+    "password": "Şifre",
+    "confirmPassword": "Şifre Tekrar",
+    "fullName": "Ad Soyad",
+    "noAccount": "Hesabın yok mu? Kayıt ol",
+    "hasAccount": "Zaten hesabın var mı? Giriş yap",
+    "loginError": "Giriş Hatası",
+    "registerError": "Kayıt Hatası",
+    "registerSuccess": "Kayıt tamamlandı! Lütfen e-postanızı doğrulayın.",
+    "kvkkConsent": "KVKK Aydınlatma Metnini okudum ve kabul ediyorum."
+  },
+  "parent": {
+    "welcome": "Hoş geldin",
+    "childProfiles": "Çocuk Profilleri",
+    "addChild": "Çocuk Ekle",
+    "settings": "Ayarlar",
+    "signOut": "Çıkış Yap",
+    "weeklyReport": "Bu Hafta",
+    "sessions": "Oturum",
+    "duration": "Süre",
+    "stars": "Yıldız",
+    "moduleProgress": "Modül İlerlemesi",
+    "completedModules": "Tamamlanan modüller",
+    "profileNotFound": "Çocuk profili bulunamadı.",
+    "gradeClass": "Sınıf",
+    "age": "yaş",
+    "gradeLessons": "Sınıf Dersler",
+    "deleteAccountConfirm": "Hesabınızı ve tüm çocuk verilerini kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+    "deleteError": "Hesap silinirken bir sorun oluştu.",
+    "yourData": "Verileriniz"
+  },
+  "child": {
+    "todayLesson": "Günün Dersi",
+    "allLessons": "Tüm Dersler",
+    "start": "Başla",
+    "locked": "Kilitli",
+    "completed": "Tamamlandı",
+    "starsRequired": "yıldız gerekli",
+    "greeting": "Merhaba",
+    "readyToLearn": "Bugün ne öğrenmeye hazırsın? 🎉"
+  },
+  "lesson": {
+    "question": "Soru",
+    "tapToAnswer": "Cevaplamak için dokun",
+    "tapToStop": "Durdurmak için dokun",
+    "atesThinking": "Ateş düşünüyor...",
+    "congratulations": "Tebrikler!",
+    "completedSection": "bölümünü tamamladın!",
+    "correct": "Doğru",
+    "continue": "Devam Et"
+  },
+  "settings": {
+    "account": "Hesap",
+    "notifications": "Bildirimler",
+    "dailyReminder": "Günlük Hatırlatma",
+    "screenTime": "Ekran Süresi",
+    "dailyLimit": "Günlük Limit",
+    "privacy": "Veri ve Gizlilik",
+    "exportData": "Verilerimi İndir",
+    "deleteAccount": "Hesabımı Sil",
+    "upgradePlan": "Planı Yükselt",
+    "min": "dk",
+    "plan": "Plan",
+    "deleteAccountTitle": "Hesabı Sil"
+  }
+}
